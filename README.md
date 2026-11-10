@@ -42,7 +42,7 @@
 ### Способ 2: Запуск скрипта Python (любая ОС)
 Работает на Windows, macOS и Linux без установки дополнительных библиотек:
 ```bash
-git clone https://github.com/ВАШ_ЛОГИН/cloudflare-ai-dns.git
+git clone https://github.com/xcxpellx/cf-zero-trust-dns.git
 cd cloudflare-ai-dns
 python setup_cf_dns.py
 ```
