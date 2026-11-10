@@ -1,0 +1,8 @@
+# PyInstaller build artifacts
+build/
+*.spec
+__pycache__/
+*.pyc
+
+# Keep dist or ignore if uploading to Releases
+# dist/
