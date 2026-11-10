@@ -17,7 +17,7 @@ def safe_input(prompt=""):
     except (EOFError, KeyboardInterrupt):
         return ""
 
-# Список сервисов ИИ (Gemini, Claude, Cursor, Perplexity, Canva, Spotify и др.)
+# 1. Сервисы ИИ (Claude, Cursor, Perplexity, Canva, Spotify, Google AI Studio и др.)
 AI_DOMAINS = [
     "generativelanguage.googleapis.com",
     "robinfrontend-pa.googleapis.com",
@@ -29,8 +29,6 @@ AI_DOMAINS = [
     "anthropic.com",
     "claudeusercontent.com",
     "aistudio.google.com",
-    "gemini.google.com",
-    "gemini.google",
     "makersuite.google.com",
     "deepmind.com",
     "deepmind.google",
@@ -49,7 +47,7 @@ AI_DOMAINS = [
     "spotify.com",
 ]
 
-# Список сервисов OpenAI (ChatGPT)
+# 2. Сервисы OpenAI (ChatGPT)
 OPENAI_DOMAINS = [
     "openai.com",
     "auth.openai.com",
@@ -61,9 +59,16 @@ OPENAI_DOMAINS = [
     "chatgpt.site",
 ]
 
+# 3. Google Gemini (вынесен отдельно для гибкого подбора IP)
+GEMINI_DOMAINS = [
+    "gemini.google.com",
+    "gemini.google",
+]
+
 # Проверенные зарубежные IP-релеи
 AI_OVERRIDE_IP = "143.20.64.192"
 OPENAI_OVERRIDE_IP = "37.221.93.141"
+GEMINI_OVERRIDE_IP = "143.20.64.192"
 
 
 class CloudflareGatewaySetup:
@@ -134,12 +139,13 @@ class CloudflareGatewaySetup:
                 print(f"  [✓] Правило '{name}' уже существует")
                 return rule.get("id")
 
+        traffic_str = 'any(dns.domains[*] in $' + list_id + ')'
         payload = {
             "name": name,
             "description": f"SNI override to {override_ip}",
             "enabled": True,
             "action": "override",
-            "traffic": f"any(dns.domains[*] in ${list_id})",
+            "traffic": traffic_str,
             "rule_settings": {
                 "override_ips": [override_ip]
             },
@@ -175,10 +181,12 @@ class CloudflareGatewaySetup:
         print("\n[2/4] Создание списков доменов...")
         ai_list_id = self.get_or_create_list("AI_Bypass_Domains", AI_DOMAINS)
         openai_list_id = self.get_or_create_list("OpenAI_Domains", OPENAI_DOMAINS)
+        gemini_list_id = self.get_or_create_list("Gemini_Domains", GEMINI_DOMAINS)
 
         print("\n[3/4] Настройка правил перенаправления (SNI Override)...")
         self.get_or_create_rule("AI Services SNI Override", ai_list_id, AI_OVERRIDE_IP)
         self.get_or_create_rule("OpenAI Backend Override", openai_list_id, OPENAI_OVERRIDE_IP)
+        self.get_or_create_rule("Google Gemini Override", gemini_list_id, GEMINI_OVERRIDE_IP)
 
         print("\n[4/4] Получение адресов вашей персональной точки DNS...")
         loc = self.get_or_create_location("home")
