@@ -1,8 +1,7 @@
 # PyInstaller build artifacts
 build/
+dist/
 *.spec
 __pycache__/
 *.pyc
-
-# Keep dist or ignore if uploading to Releases
-# dist/
+d2o_worker.js

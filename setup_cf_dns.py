@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Cloudflare Zero Trust Gateway DNS Auto-Setup Tool
-Автоматическая настройка персонального безопасного DNS со встроенным обходом блокировок ИИ-сервисов.
+Автоматическая настройка персонального безопасного DNS со встроенным обходом блокировок ИИ-сервисов и Spotify.
 """
 
 import urllib.request
@@ -17,7 +17,7 @@ def safe_input(prompt=""):
     except (EOFError, KeyboardInterrupt):
         return ""
 
-# 1. Сервисы ИИ (Claude, Cursor, Perplexity, Canva, Spotify, Google AI Studio и др.)
+# 1. Сервисы ИИ (Claude, Cursor, Perplexity, Canva, Google AI Studio и др.)
 AI_DOMAINS = [
     "generativelanguage.googleapis.com",
     "robinfrontend-pa.googleapis.com",
@@ -44,7 +44,6 @@ AI_DOMAINS = [
     "civitai.com",
     "designer.microsoft.com",
     "canva.com",
-    "spotify.com",
 ]
 
 # 2. Сервисы OpenAI (ChatGPT)
@@ -59,16 +58,24 @@ OPENAI_DOMAINS = [
     "chatgpt.site",
 ]
 
-# 3. Google Gemini (вынесен отдельно для гибкого подбора IP)
+# 3. Google Gemini (вынесен отдельно для стабильной работы без капчи)
 GEMINI_DOMAINS = [
     "gemini.google.com",
     "gemini.google",
 ]
 
+# 4. Spotify (веб-плеер, авторизация, API и CDN)
+SPOTIFY_DOMAINS = [
+    "spotify.com",
+    "scdn.co",
+    "spotifycdn.com",
+]
+
 # Проверенные зарубежные IP-релеи
-AI_OVERRIDE_IP = "143.20.64.192"
-OPENAI_OVERRIDE_IP = "37.221.93.141"
-GEMINI_OVERRIDE_IP = "143.20.64.192"
+AI_OVERRIDE_IPS = ["143.20.64.192"]
+OPENAI_OVERRIDE_IPS = ["37.221.93.141"]
+GEMINI_OVERRIDE_IPS = ["109.120.187.249", "217.144.190.216"]
+SPOTIFY_OVERRIDE_IPS = ["217.144.190.216", "109.120.187.249"]
 
 
 class CloudflareGatewaySetup:
@@ -116,8 +123,9 @@ class CloudflareGatewaySetup:
         existing_lists = res.get("result", [])
         for lst in existing_lists:
             if lst.get("name") == name:
+                list_id = lst.get("id")
                 print(f"  [✓] Список '{name}' уже существует")
-                return lst.get("id")
+                return list_id
 
         items = [{"value": d} for d in domains]
         payload = {
@@ -131,29 +139,35 @@ class CloudflareGatewaySetup:
         print(f"  [+] Создан список '{name}' ({len(domains)} доменов)")
         return list_id
 
-    def get_or_create_rule(self, name: str, list_id: str, override_ip: str):
+    def get_or_create_rule(self, name: str, list_id: str, override_ips: list):
+        if isinstance(override_ips, str):
+            override_ips = [override_ips]
+
         res = self._api_call("rules")
         existing_rules = res.get("result", [])
-        for rule in existing_rules:
-            if rule.get("name") == name:
-                print(f"  [✓] Правило '{name}' уже существует")
-                return rule.get("id")
-
         traffic_str = 'any(dns.domains[*] in $' + list_id + ')'
         payload = {
             "name": name,
-            "description": f"SNI override to {override_ip}",
+            "description": f"SNI override to {', '.join(override_ips)}",
             "enabled": True,
             "action": "override",
             "traffic": traffic_str,
             "rule_settings": {
-                "override_ips": [override_ip]
+                "override_ips": override_ips
             },
             "filters": ["dns"]
         }
+
+        for rule in existing_rules:
+            if rule.get("name") == name:
+                rule_id = rule.get("id")
+                self._api_call(f"rules/{rule_id}", method="PUT", data=payload)
+                print(f"  [✓] Обновлено правило '{name}' -> {', '.join(override_ips)}")
+                return rule_id
+
         res = self._api_call("rules", method="POST", data=payload)
         rule_id = res.get("result", {}).get("id")
-        print(f"  [+] Создано правило '{name}' -> {override_ip}")
+        print(f"  [+] Создано правило '{name}' -> {', '.join(override_ips)}")
         return rule_id
 
     def get_or_create_location(self, name: str = "home") -> dict:
@@ -182,11 +196,13 @@ class CloudflareGatewaySetup:
         ai_list_id = self.get_or_create_list("AI_Bypass_Domains", AI_DOMAINS)
         openai_list_id = self.get_or_create_list("OpenAI_Domains", OPENAI_DOMAINS)
         gemini_list_id = self.get_or_create_list("Gemini_Domains", GEMINI_DOMAINS)
+        spotify_list_id = self.get_or_create_list("Spotify_Domains", SPOTIFY_DOMAINS)
 
         print("\n[3/4] Настройка правил перенаправления (SNI Override)...")
-        self.get_or_create_rule("AI Services SNI Override", ai_list_id, AI_OVERRIDE_IP)
-        self.get_or_create_rule("OpenAI Backend Override", openai_list_id, OPENAI_OVERRIDE_IP)
-        self.get_or_create_rule("Google Gemini Override", gemini_list_id, GEMINI_OVERRIDE_IP)
+        self.get_or_create_rule("AI Services SNI Override", ai_list_id, AI_OVERRIDE_IPS)
+        self.get_or_create_rule("OpenAI Backend Override", openai_list_id, OPENAI_OVERRIDE_IPS)
+        self.get_or_create_rule("Google Gemini Override", gemini_list_id, GEMINI_OVERRIDE_IPS)
+        self.get_or_create_rule("Spotify SNI Override", spotify_list_id, SPOTIFY_OVERRIDE_IPS)
 
         print("\n[4/4] Получение адресов вашей персональной точки DNS...")
         loc = self.get_or_create_location("home")
@@ -212,7 +228,7 @@ class CloudflareGatewaySetup:
         print("\n2. На телефоне (Android):")
         print("   Настройки -> Сеть / Подключения -> Частный DNS (Private DNS)")
         print(f"   -> Вставьте имя хоста: {dot_host}")
-        print("\n3. На роутере (Keenetic / OpenWrt):")
+        print("\n3. На роутере (Keenetic / OpenWrt / Asus):")
         print(f"   Добавьте DoH-сервер с адресом: {doh_url}")
         print("=" * 68 + "\n")
 

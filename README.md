@@ -1,6 +1,6 @@
 # Cloudflare Zero Trust AI DNS Setup 🚀
 
-Автоматическая настройка персонального безопасного DNS-сервера (**DNS-over-HTTPS / DNS-over-TLS**) на базе **Cloudflare Zero Trust** со встроенным обходом блокировок зарубежных ИИ-сервисов (ChatGPT, Claude, Google Gemini, Cursor и др.) **без VPN**.
+Автоматическая настройка персонального безопасного DNS-сервера (**DNS-over-HTTPS / DNS-over-TLS**) на базе **Cloudflare Zero Trust** со встроенным обходом блокировок зарубежных ИИ-сервисов (ChatGPT, Claude, Google Gemini, Cursor и др.) и Spotify **без VPN**.
 
 ---
 
@@ -10,7 +10,7 @@
 
 1. Вы используете **персональный защищённый DNS** от Cloudflare.
 2. Для обычных сайтов (Яндекс, YouTube, ВК, банки и т.д.) DNS отдаёт их стандартные адреса.
-3. При запросе к заблокированным ИИ-сервисам (ChatGPT, Claude, Gemini и т.д.) ваш Cloudflare Gateway автоматически подменяет IP на проверенный зарубежный Anycast-релей (**SNI Override**).
+3. При запросе к заблокированным ИИ-сервисам (ChatGPT, Claude, Gemini, Spotify и т.д.) ваш Cloudflare Gateway автоматически подменяет IP на проверенный зарубежный Anycast-релей (**SNI Override**).
 4. Сервисы открываются **напрямую на полной скорости вашего провайдера**.
 
 ```
@@ -19,7 +19,7 @@
              ▼
 [Cloudflare Gateway (Ваш личный DNS)]
    ├── Обычные сайты  ──► Стандартные IP (напрямую)
-   └── ChatGPT / Claude / Gemini ──► SNI Override IP ──► Доступ без VPN!
+   └── ChatGPT / Claude / Gemini / Spotify ──► SNI Override IP ──► Доступ без VPN!
 ```
 
 ---
@@ -28,9 +28,10 @@
 
 * **OpenAI:** `chatgpt.com`, `openai.com`, `api.openai.com`, `auth.openai.com`
 * **Anthropic:** `claude.ai`, `claude.com`, `anthropic.com`
-* **Google AI:** `gemini.google.com`, `aistudio.google.com`, `makersuite.google.com`, `deepmind.com`
+* **Google Gemini & AI:** `gemini.google.com`, `aistudio.google.com`, `makersuite.google.com`, `deepmind.com`
+* **Spotify:** `spotify.com`, `open.spotify.com`, `scdn.co`, `spotifycdn.com` (веб-плеер, авторизация, обложки, стриминг)
 * **Разработка и ИИ:** `cursor.com`, `cursor.sh`, `perplexity.ai`, `v0.dev`, `sora.com`, `copilot.microsoft.com`, `midjourney.com`, `civitai.com`
-* **Другие сервисы:** `canva.com`, `spotify.com`, `ntc.party`
+* **Другие сервисы:** `canva.com`, `ntc.party`
 
 ---
 
@@ -43,7 +44,7 @@
 Работает на Windows, macOS и Linux без установки дополнительных библиотек:
 ```bash
 git clone https://github.com/xcxpellx/cf-zero-trust-dns.git
-cd cloudflare-ai-dns
+cd cf-zero-trust-dns
 python setup_cf_dns.py
 ```
 
@@ -85,7 +86,7 @@ python setup_cf_dns.py
 2. Выберите **Частный DNS-сервер** (Private DNS).
 3. Укажите имя хоста провайдера частного DNS: `<subdomain>.cloudflare-gateway.com`.
 
-### 📡 На роутере (Keenetic / OpenWrt):
+### 📡 На роутере (Keenetic / OpenWrt / Asus):
 * В Keenetic: **Сетевые правила** $\rightarrow$ **Интернет-фильтр** $\rightarrow$ добавьте сервер DNS-over-HTTPS с вашим адресом.
 
 ---
