@@ -23,6 +23,7 @@ AI_DOMAINS = [
     "robinfrontend-pa.googleapis.com",
     "proactivebackend-pa.googleapis.com",
     "alkalimakersuite-pa.clients6.google.com",
+    "webchannel-alkalimakersuite-pa.clients6.google.com",
     "bard.google.com",
     "claude.ai",
     "claude.com",
@@ -64,10 +65,14 @@ OPENAI_DOMAINS = [
     "oaiusercontent.com",
 ]
 
-# 3. Google Gemini (вынесен отдельно для стабильной работы без капчи)
+# 3. Google Gemini (полный стек эндпоинтов для чата и сессий)
 GEMINI_DOMAINS = [
     "gemini.google.com",
     "gemini.google",
+    "geminiweb-pa.clients6.google.com",
+    "proactivebackend-pa.googleapis.com",
+    "robinfrontend-pa.googleapis.com",
+    "bard.google.com",
 ]
 
 # 4. Spotify (веб-плеер, авторизация, API и CDN)
@@ -83,7 +88,7 @@ SPOTIFY_DOMAINS = [
 # Проверенные зарубежные IP-релеи
 AI_OVERRIDE_IPS = ["143.20.64.192"]
 OPENAI_OVERRIDE_IPS = ["37.221.93.141"]
-GEMINI_OVERRIDE_IPS = ["77.90.47.224"]
+GEMINI_OVERRIDE_IPS = ["143.20.64.192"]
 SPOTIFY_OVERRIDE_IPS = ["109.120.187.249"]
 
 
