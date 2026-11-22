@@ -26,12 +26,12 @@
 
 ## 🌟 Поддерживаемые сервисы
 
-* **OpenAI:** `chatgpt.com`, `openai.com`, `api.openai.com`, `auth.openai.com`
-* **Anthropic:** `claude.ai`, `claude.com`, `anthropic.com`
+* **OpenAI:** `chatgpt.com`, `openai.com`, `api.openai.com`, `auth.openai.com`, `oaistatic.com`, `oaiusercontent.com`
+* **Anthropic:** `claude.ai`, `claude.com`, `anthropic.com`, `claudeusercontent.com`
 * **Google Gemini & AI:** `gemini.google.com`, `aistudio.google.com`, `makersuite.google.com`, `deepmind.com`
-* **Spotify:** `spotify.com`, `open.spotify.com`, `scdn.co`, `spotifycdn.com` (веб-плеер, авторизация, обложки, стриминг)
-* **Разработка и ИИ:** `cursor.com`, `cursor.sh`, `perplexity.ai`, `v0.dev`, `sora.com`, `copilot.microsoft.com`, `midjourney.com`, `civitai.com`
-* **Другие сервисы:** `canva.com`, `ntc.party`
+* **Spotify:** `spotify.com`, `open.spotify.com`, `scdn.co`, `spotifycdn.com`, `spotifycdn.net` (веб-плеер, авторизация, обложки, CDN треков)
+* **Разработка и ИИ:** `cursor.com`, `cursor.sh`, `perplexity.ai`, `v0.dev`, `sora.com`, `copilot.microsoft.com`, `midjourney.com`, `civitai.com`, `elevenlabs.io`
+* **Продуктивность и инструменты:** `deepl.com`, `notion.so`, `canva.com`, `ntc.party`
 
 ---
 

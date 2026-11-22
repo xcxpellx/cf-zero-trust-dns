@@ -17,7 +17,7 @@ def safe_input(prompt=""):
     except (EOFError, KeyboardInterrupt):
         return ""
 
-# 1. Сервисы ИИ (Claude, Cursor, Perplexity, Canva, Google AI Studio и др.)
+# 1. Сервисы ИИ и зарубежные платформы (Claude, Cursor, Perplexity, DeepL, Notion, Canva и др.)
 AI_DOMAINS = [
     "generativelanguage.googleapis.com",
     "robinfrontend-pa.googleapis.com",
@@ -44,9 +44,13 @@ AI_DOMAINS = [
     "civitai.com",
     "designer.microsoft.com",
     "canva.com",
+    "deepl.com",
+    "notion.so",
+    "notion.site",
+    "elevenlabs.io",
 ]
 
-# 2. Сервисы OpenAI (ChatGPT)
+# 2. Сервисы OpenAI (ChatGPT, CDN статики и ассетов DALL-E)
 OPENAI_DOMAINS = [
     "openai.com",
     "auth.openai.com",
@@ -56,6 +60,8 @@ OPENAI_DOMAINS = [
     "tcr9i.chat.openai.com",
     "chatgpt.com",
     "chatgpt.site",
+    "oaistatic.com",
+    "oaiusercontent.com",
 ]
 
 # 3. Google Gemini (вынесен отдельно для стабильной работы без капчи)
@@ -69,6 +75,9 @@ SPOTIFY_DOMAINS = [
     "spotify.com",
     "scdn.co",
     "spotifycdn.com",
+    "spotifycdn.net",
+    "spotify.design",
+    "spotify.link",
 ]
 
 # Проверенные зарубежные IP-релеи
