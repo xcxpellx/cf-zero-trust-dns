@@ -38,7 +38,7 @@
 ## ⚡ Быстрый старт
 
 ### Способ 1: Готовый `.exe` (для Windows)
-Не требует установки Python! Скачайте готовый файл из раздела **[Releases](../../releases)** и запустите.
+Не требует установки Python! Скачайте готовый файл прямо из репозитория: **[Скачать CloudflareDNS_Setup.exe](https://github.com/xcxpellx/cf-zero-trust-dns/raw/main/CloudflareDNS_Setup.exe)** (или из раздела **[Releases](../../releases)**) и запустите.
 
 ### Способ 2: Запуск скрипта Python (любая ОС)
 Работает на Windows, macOS и Linux без установки дополнительных библиотек:
