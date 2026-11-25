@@ -1,6 +1,6 @@
 # Cloudflare Zero Trust AI DNS Setup 🚀
 
-Автоматическая настройка персонального безопасного DNS-сервера (**DNS-over-HTTPS / DNS-over-TLS**) на базе **Cloudflare Zero Trust** со встроенным обходом блокировок зарубежных ИИ-сервисов (ChatGPT, Claude, Google Gemini, Cursor и др.) и Spotify **без VPN**.
+Автоматическая настройка персонального безопасного DNS-сервера (**DNS-over-HTTPS / DNS-over-TLS**) на базе **Cloudflare Zero Trust** со встроенным обходом блокировок зарубежных ИИ-сервисов (ChatGPT, Claude, Google Gemini, AI Studio, Grok, Cursor и др.), а также опциональными правилами для **Spotify** и **SoundCloud** **без VPN**.
 
 ---
 
@@ -10,7 +10,7 @@
 
 1. Вы используете **персональный защищённый DNS** от Cloudflare.
 2. Для обычных сайтов (Яндекс, YouTube, ВК, банки и т.д.) DNS отдаёт их стандартные адреса.
-3. При запросе к заблокированным ИИ-сервисам (ChatGPT, Claude, Gemini, Spotify и т.д.) ваш Cloudflare Gateway автоматически подменяет IP на проверенный зарубежный Anycast-релей (**SNI Override**).
+3. При запросе к заблокированным сервисам (ChatGPT, Claude, Gemini, Grok и т.д.) ваш Cloudflare Gateway автоматически подменяет IP на проверенный зарубежный узел (**SNI Override**).
 4. Сервисы открываются **напрямую на полной скорости вашего провайдера**.
 
 ```
@@ -19,19 +19,25 @@
              ▼
 [Cloudflare Gateway (Ваш личный DNS)]
    ├── Обычные сайты  ──► Стандартные IP (напрямую)
-   └── ChatGPT / Claude / Gemini / Spotify ──► SNI Override IP ──► Доступ без VPN!
+   └── ChatGPT / Claude / Gemini / Grok ──► SNI Override IP ──► Доступ без VPN!
 ```
 
 ---
 
 ## 🌟 Поддерживаемые сервисы
 
+### Включены по умолчанию:
 * **OpenAI:** `chatgpt.com`, `openai.com`, `api.openai.com`, `auth.openai.com`, `oaistatic.com`, `oaiusercontent.com`
 * **Anthropic:** `claude.ai`, `claude.com`, `anthropic.com`, `claudeusercontent.com`
-* **Google Gemini & AI:** `gemini.google.com`, `aistudio.google.com`, `makersuite.google.com`, `deepmind.com`
-* **Spotify:** `spotify.com`, `open.spotify.com`, `scdn.co`, `spotifycdn.com`, `spotifycdn.net` (веб-плеер, авторизация, обложки, CDN треков)
-* **Разработка и ИИ:** `cursor.com`, `cursor.sh`, `perplexity.ai`, `v0.dev`, `sora.com`, `copilot.microsoft.com`, `midjourney.com`, `civitai.com`, `elevenlabs.io`
-* **Продуктивность и инструменты:** `deepl.com`, `notion.so`, `canva.com`, `ntc.party`
+* **Grok (xAI):** `grok.com`, `grok.x.com`, `assets.grok.com`, `x.ai`, `accounts.x.ai`, `console.x.ai`, `api.x.ai`
+* **Google Gemini & AI Studio:** `gemini.google.com`, `geminiweb-pa.clients6.google.com`, `aistudio.google.com`, `alkalimakersuite-pa.clients6.google.com`, `webchannel-alkalimakersuite-pa.clients6.google.com`, `generativelanguage.googleapis.com`, `makersuite.google.com`, `deepmind.com`
+* **Разработка и ИИ:** `cursor.com`, `cursor.sh`, `cursorapi.com`, `perplexity.ai`, `v0.dev`, `sora.com`, `copilot.microsoft.com`, `midjourney.com`, `civitai.com`, `elevenlabs.io`
+* **Продуктивность и инструменты:** `deepl.com`, `notion.so`, `notion.site`, `canva.com`, `ntc.party`
+
+### Опциональные правила (создаются с выключенным тумблером):
+В панели **Cloudflare Zero Trust** (*Gateway → Firewall Policies → DNS*) правила создаются выключенными по умолчанию — вы можете включать и отключать их одним кликом по мере необходимости:
+* **Spotify:** `spotify.com`, `scdn.co`, `spotifycdn.com`, `spotifycdn.net`, `spotify.design`, `spotify.link` (SNI-релей)
+* **SoundCloud:** `soundcloud.com`, `sndcdn.com` (фиксация рабочего IP Amazon CloudFront)
 
 ---
 

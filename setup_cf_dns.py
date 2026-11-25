@@ -149,7 +149,20 @@ class CloudflareGatewaySetup:
         for lst in existing_lists:
             if lst.get("name") == name:
                 list_id = lst.get("id")
-                print(f"  [✓] Список '{name}' уже существует")
+                items_res = self._api_call(f"lists/{list_id}/items")
+                existing_items = [it.get("value") for it in items_res.get("result", [])]
+                to_add = [d for d in domains if d not in existing_items]
+                to_remove = [d for d in existing_items if d not in domains]
+                if to_add or to_remove:
+                    patch_payload = {}
+                    if to_add:
+                        patch_payload["append"] = [{"value": d} for d in to_add]
+                    if to_remove:
+                        patch_payload["remove"] = to_remove
+                    self._api_call(f"lists/{list_id}", method="PATCH", data=patch_payload)
+                    print(f"  [✓] Обновлён список '{name}' (+{len(to_add)}, -{len(to_remove)})")
+                else:
+                    print(f"  [✓] Список '{name}' уже актуален")
                 return list_id
 
         items = [{"value": d} for d in domains]
