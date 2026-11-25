@@ -17,12 +17,19 @@ def safe_input(prompt=""):
     except (EOFError, KeyboardInterrupt):
         return ""
 
-# 1. Сервисы ИИ и зарубежные платформы (Claude, Cursor, Perplexity, DeepL, Notion, Canva и др.)
+# 1. Сервисы ИИ и зарубежные платформы (Claude, Grok, Cursor, Perplexity, DeepL, Notion, Canva и др.)
 AI_DOMAINS = [
     "claude.ai",
     "claude.com",
     "anthropic.com",
     "claudeusercontent.com",
+    "grok.com",
+    "grok.x.com",
+    "assets.grok.com",
+    "x.ai",
+    "accounts.x.ai",
+    "console.x.ai",
+    "api.x.ai",
     "sora.com",
     "perplexity.ai",
     "copilot.microsoft.com",
@@ -82,11 +89,18 @@ SPOTIFY_DOMAINS = [
     "spotify.link",
 ]
 
+# 5. SoundCloud (опциональный CloudFront-маршрут, по умолчанию выключен)
+SOUNDCLOUD_DOMAINS = [
+    "soundcloud.com",
+    "sndcdn.com",
+]
+
 # Проверенные зарубежные IP-релеи
 AI_OVERRIDE_IPS = ["31.58.216.201"]
 OPENAI_OVERRIDE_IPS = ["31.58.216.201"]
 GEMINI_OVERRIDE_IPS = ["109.120.187.249"]
 SPOTIFY_OVERRIDE_IPS = ["109.120.187.249"]
+SOUNDCLOUD_OVERRIDE_IPS = ["52.84.150.39"]
 
 
 class CloudflareGatewaySetup:
@@ -150,7 +164,7 @@ class CloudflareGatewaySetup:
         print(f"  [+] Создан список '{name}' ({len(domains)} доменов)")
         return list_id
 
-    def get_or_create_rule(self, name: str, list_id: str, override_ips: list):
+    def get_or_create_rule(self, name: str, list_id: str, override_ips: list, enabled: bool = True):
         if isinstance(override_ips, str):
             override_ips = [override_ips]
 
@@ -160,7 +174,7 @@ class CloudflareGatewaySetup:
         payload = {
             "name": name,
             "description": f"SNI override to {', '.join(override_ips)}",
-            "enabled": True,
+            "enabled": enabled,
             "action": "override",
             "traffic": traffic_str,
             "rule_settings": {
@@ -173,12 +187,12 @@ class CloudflareGatewaySetup:
             if rule.get("name") == name:
                 rule_id = rule.get("id")
                 self._api_call(f"rules/{rule_id}", method="PUT", data=payload)
-                print(f"  [✓] Обновлено правило '{name}' -> {', '.join(override_ips)}")
+                print(f"  [✓] Обновлено правило '{name}' -> {', '.join(override_ips)} (enabled={enabled})")
                 return rule_id
 
         res = self._api_call("rules", method="POST", data=payload)
         rule_id = res.get("result", {}).get("id")
-        print(f"  [+] Создано правило '{name}' -> {', '.join(override_ips)}")
+        print(f"  [+] Создано правило '{name}' -> {', '.join(override_ips)} (enabled={enabled})")
         return rule_id
 
     def get_or_create_location(self, name: str = "home") -> dict:
@@ -208,12 +222,14 @@ class CloudflareGatewaySetup:
         openai_list_id = self.get_or_create_list("OpenAI_Domains", OPENAI_DOMAINS)
         gemini_list_id = self.get_or_create_list("Gemini_Domains", GEMINI_DOMAINS)
         spotify_list_id = self.get_or_create_list("Spotify_Domains", SPOTIFY_DOMAINS)
+        soundcloud_list_id = self.get_or_create_list("SoundCloud_Domains", SOUNDCLOUD_DOMAINS)
 
         print("\n[3/4] Настройка правил перенаправления (SNI Override)...")
-        self.get_or_create_rule("AI Services SNI Override", ai_list_id, AI_OVERRIDE_IPS)
-        self.get_or_create_rule("OpenAI Backend Override", openai_list_id, OPENAI_OVERRIDE_IPS)
-        self.get_or_create_rule("Google Gemini Override", gemini_list_id, GEMINI_OVERRIDE_IPS)
-        self.get_or_create_rule("Spotify SNI Override", spotify_list_id, SPOTIFY_OVERRIDE_IPS)
+        self.get_or_create_rule("AI Services SNI Override", ai_list_id, AI_OVERRIDE_IPS, enabled=True)
+        self.get_or_create_rule("OpenAI Backend Override", openai_list_id, OPENAI_OVERRIDE_IPS, enabled=True)
+        self.get_or_create_rule("Google Gemini Override", gemini_list_id, GEMINI_OVERRIDE_IPS, enabled=True)
+        self.get_or_create_rule("Spotify SNI Override", spotify_list_id, SPOTIFY_OVERRIDE_IPS, enabled=False)
+        self.get_or_create_rule("SoundCloud SNI Override", soundcloud_list_id, SOUNDCLOUD_OVERRIDE_IPS, enabled=False)
 
         print("\n[4/4] Получение адресов вашей персональной точки DNS...")
         loc = self.get_or_create_location("home")
