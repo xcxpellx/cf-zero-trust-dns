@@ -167,4 +167,5 @@ class CloudflareGatewaySetup:
                 items_res = self._api_call(f"lists/{list_id}/items")
                 existing_items = [it.get("value") for it in (items_res.get("result") or [])]
                 to_add = [d for d in domains if d not in existing_items]
-                to_remove =
+                to_remove = [d for d in existing_items if d not in domains]
+                if to_add or to_remove:
