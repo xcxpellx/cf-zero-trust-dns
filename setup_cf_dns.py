@@ -158,6 +158,57 @@ class CloudflareGatewaySetup:
         # и токен (включая Account Tokens), и Account ID, и активация Zero Trust.
         self._api_call("locations")
 
+    def cleanup_existing_settings(self):
+        print("\n[*] Очистка старых DNS-правил и списков доменов...")
+        # Сначала удаляем DNS-правила, иначе Cloudflare не даст удалить используемые в них списки
+        rules_res = self._api_call("rules")
+        existing_rules = rules_res.get("result") or []
+        dns_rules = [r for r in existing_rules if "dns" in (r.get("filters") or [])]
+
+        for rule in dns_rules:
+            rule_id = rule.get("id")
+            rule_name = rule.get("name", rule_id)
+            try:
+                self._api_call(f"rules/{rule_id}", method="DELETE")
+                print(f"  [-] Удалено правило '{rule_name}'")
+            except Exception as e:
+                print(f"  [!] Не удалось удалить правило '{rule_name}': {e}")
+
+        lists_res = self._api_call("lists")
+        existing_lists = lists_res.get("result") or []
+        domain_lists = [lst for lst in existing_lists if lst.get("type") == "DOMAIN"]
+
+        for lst in domain_lists:
+            list_id = lst.get("id")
+            list_name = lst.get("name", list_id)
+            try:
+                self._api_call(f"lists/{list_id}", method="DELETE")
+                print(f"  [-] Удалён список '{list_name}'")
+            except Exception as e:
+                print(f"  [!] Пропущен список '{list_name}' (возможно, используется в другом правиле): {e}")
+
+    def maybe_prompt_cleanup(self):
+        rules_res = self._api_call("rules")
+        existing_rules = rules_res.get("result") or []
+        dns_rules_count = sum(1 for r in existing_rules if "dns" in (r.get("filters") or []))
+
+        lists_res = self._api_call("lists")
+        existing_lists = lists_res.get("result") or []
+        domain_lists_count = sum(1 for lst in existing_lists if lst.get("type") == "DOMAIN")
+
+        if dns_rules_count == 0 and domain_lists_count == 0:
+            return
+
+        print(f"\n[?] На аккаунте найдены существующие настройки (DNS-правил: {dns_rules_count}, списков доменов: {domain_lists_count}).")
+        print("    1 — Оставить как есть и обновить/добавить наши правила (по умолчанию)")
+        print("    2 — Удалить все старые DNS-правила и списки перед настройкой")
+        print("        (ваша точка DNS и адреса DoH/DoT при этом сохранятся)")
+        choice = safe_input("Выберите действие [1/2]: ").strip()
+        if choice == "2":
+            self.cleanup_existing_settings()
+        else:
+            print("    -> Существующие настройки сохранены, обновляем поверх.")
+
     def get_or_create_list(self, name: str, domains: list) -> str:
         res = self._api_call("lists")
         existing_lists = res.get("result") or []
@@ -196,6 +247,15 @@ class CloudflareGatewaySetup:
         res = self._api_call("rules")
         existing_rules = res.get("result") or []
 
+        used_precedences = {
+            r.get("precedence")
+            for r in existing_rules
+            if r.get("name") != name and r.get("precedence") is not None
+        }
+        precedence = 1
+        while precedence in used_precedences:
+            precedence += 1
+
         domains_expr = " or ".join([f"any(dns.domains[*] in ${lid})" for lid in list_ids])
         traffic_str = f'({domains_expr}) and dns.query_rtype == "AAAA"'
 
@@ -204,7 +264,7 @@ class CloudflareGatewaySetup:
             "description": "Block AAAA (IPv6) queries for overridden domains to force IPv4 SNI proxy",
             "enabled": enabled,
             "action": "block",
-            "precedence": 10,
+            "precedence": precedence,
             "traffic": traffic_str,
             "rule_settings": {
                 "block_page_enabled": False,
@@ -216,12 +276,12 @@ class CloudflareGatewaySetup:
             if rule.get("name") == name:
                 rule_id = rule.get("id")
                 self._api_call(f"rules/{rule_id}", method="PUT", data=payload)
-                print(f"  [✓] Обновлено правило '{name}' (enabled={enabled})")
+                print(f"  [✓] Обновлено правило '{name}' (precedence={precedence}, enabled={enabled})")
                 return rule_id
 
         res = self._api_call("rules", method="POST", data=payload)
         rule_id = (res.get("result") or {}).get("id")
-        print(f"  [+] Создано правило '{name}' (enabled={enabled})")
+        print(f"  [+] Создано правило '{name}' (precedence={precedence}, enabled={enabled})")
         return rule_id
 
     def get_or_create_rule(self, name: str, list_id: str, override_ips: list, enabled: bool = True):
@@ -276,6 +336,8 @@ class CloudflareGatewaySetup:
         print("\n[1/4] Проверка подключения к Cloudflare Zero Trust...")
         self.verify_token()
         print("      Авторизация успешна!")
+
+        self.maybe_prompt_cleanup()
 
         print("\n[2/4] Создание списков доменов...")
         ai_list_id = self.get_or_create_list("AI_Bypass_Domains", AI_DOMAINS)
