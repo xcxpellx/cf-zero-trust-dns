@@ -273,7 +273,7 @@ DOMAIN_GROUPS = [
     {
         "list_name": "SoundCloud_Domains",
         "rule_name": "SoundCloud Override",
-        "label": "SoundCloud (быстрый CloudFront IP; для SNI-DPI нужен d2o/Zapret)",
+        "label": "SoundCloud (быстрый CloudFront IP; для SNI-DPI нужен d2k/z2k или аналог)",
         "domains": SOUNDCLOUD_DOMAINS,
         "override_ips": ["108.156.22.80"],
         "default_enabled": False,
