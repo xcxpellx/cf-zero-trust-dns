@@ -63,8 +63,7 @@ python setup_cf_dns.py
 1. **Регистрация и активация Zero Trust:**  
    Зарегистрируйтесь на [dash.cloudflare.com](https://dash.cloudflare.com/). Затем перейдите в панель [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) и активируйте бесплатный тариф (**Zero Trust Free**), задав имя команды (Team Name). *Без этого шага API вернёт ошибку 403.*
 2. **Account ID:**  
-   Скопируйте 32-значный идентификатор из адресной строки браузера на главной странице дашборда:  
-   `https://dash.cloudflare.com/<ВОТ_ЭТО_ACCOUNT_ID>/...`
+   Нажмите на иконку профиля (человечка) в правом верхнем углу дашборда Cloudflare и выберите **Copy account ID** *(или скопируйте 32-значный идентификатор из адресной строки браузера: `https://dash.cloudflare.com/<ACCOUNT_ID>/...`)*.
 3. **API Token:**  
    - В левом меню внизу откройте **Manage account → Settings**.
    - В блоке **Account settings** выберите **Account API tokens** (либо в **User settings → API credentials → API tokens**) и нажмите **+ Create token**.
