@@ -66,12 +66,12 @@ python setup_cf_dns.py
    Скопируйте 32-значный идентификатор из адресной строки браузера на главной странице дашборда:  
    `https://dash.cloudflare.com/<ВОТ_ЭТО_ACCOUNT_ID>/...`
 3. **API Token:**  
-   - Перейдите в [API Tokens](https://dash.cloudflare.com/profile/api-tokens) → нажмите **Create Token**.
-   - Прокрутите вниз и выберите **Create Custom Token**.
-   - Задайте имя (например, `Zero Trust DNS`).
-   - В блоке **Permissions** укажите:  
-     `Account` → `Zero Trust` → `Edit`
-   - Нажмите **Continue to summary** → **Create Token** и скопируйте ключ.
+   - В левом меню внизу откройте **Manage account → Settings**.
+   - В блоке **Account settings** выберите **Account API tokens** (либо в **User settings → API credentials → API tokens**) и нажмите **+ Create token**.
+   - В поле **Token name** задайте имя (например, `Zero Trust DNS`).
+   - В блоке **Policies** нажмите **Start from scratch** (*Custom*) → **Start with an Account policy**.
+   - Раскройте категорию **Cloudflare One / Zero Trust**, найдите строку **Zero Trust** и отметьте галочку **Edit**.
+   - Сохраните токен (**Continue to summary** → **Create Token**) и скопируйте созданный ключ.
 
 Запустите утилиту, вставьте `Account ID` и `API Token` — настройка займёт несколько секунд.
 
