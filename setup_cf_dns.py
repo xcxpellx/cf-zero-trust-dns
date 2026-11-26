@@ -3,13 +3,14 @@
 """
 Cloudflare Zero Trust Gateway DNS Auto-Setup Tool
 Автоматическая настройка персонального шифрованного DNS (DoH/DoT)
-с разделёнными группами DNS Override для ИИ-сервисов и геоблокированных ресурсов.
+с разделёнными группами DNS Override, выбором активных групп и защитой от IPv6.
 """
 
-import urllib.request
-import urllib.error
 import json
+import re
 import sys
+import urllib.error
+import urllib.request
 
 
 def safe_input(prompt=""):
@@ -19,18 +20,21 @@ def safe_input(prompt=""):
         return ""
 
 
-# 1. Claude (Anthropic)
+# ==============================================================================
+# ПРОВЕРЕННЫЕ СПИСКИ ДОМЕНОВ (разделены по группам и совместимым релеям)
+# В Cloudflare Gateway правило any(dns.domains[*] in $list) покрывает
+# как корневой домен, так и все его поддомены.
+# ==============================================================================
+
+# 1. Claude (Anthropic) -> 31.58.216.201
 CLAUDE_DOMAINS = [
     "claude.ai",
     "claude.com",
-    "clau.de",
     "anthropic.com",
     "claudeusercontent.com",
-    "claudemcpclient.com",
-    "claudemcpcontent.com",
 ]
 
-# 2. Grok / xAI и Sora
+# 2. Grok / xAI -> 31.58.216.201
 GROK_XAI_DOMAINS = [
     "grok.com",
     "grok.x.com",
@@ -41,10 +45,9 @@ GROK_XAI_DOMAINS = [
     "console.x.ai",
     "api.x.ai",
     "assets.x.ai",
-    "sora.com",
 ]
 
-# 3. OpenAI (ChatGPT, API, CDN статики и ассетов)
+# 3. OpenAI (ChatGPT, API, CDN статики и ассетов) -> 31.58.216.201
 OPENAI_DOMAINS = [
     "openai.com",
     "auth.openai.com",
@@ -58,7 +61,7 @@ OPENAI_DOMAINS = [
     "oaiusercontent.com",
 ]
 
-# 4. Google Gemini, AI Studio, NotebookLM и Google Labs
+# 4. Google Gemini, AI Studio, NotebookLM и Google Labs -> 109.120.187.249
 GEMINI_DOMAINS = [
     "gemini.google.com",
     "gemini.google",
@@ -83,209 +86,108 @@ GEMINI_DOMAINS = [
     "jules.google.com",
     "jules.google",
     "opal.google.com",
-    "opal.google",
-    "opal.withgoogle.com",
     "labs.google.com",
     "labs.google",
     "aitestkitchen.withgoogle.com",
     "stitch.withgoogle.com",
-    "flow.google.com",
     "flow.google",
     "ai.google.dev",
     "generativeai.google",
 ]
 
-# 5. Прочие ИИ-сервисы и AI-IDE (Cursor, Windsurf, Perplexity, Midjourney, OpenRouter и др.)
+# 5. Прочие ИИ-сервисы и AI-IDE (совместимы с 31.58.216.201)
 OTHER_AI_DOMAINS = [
     "perplexity.ai",
     "copilot.microsoft.com",
     "v0.dev",
     "cursor.com",
     "cursor.sh",
-    "cursorapi.com",
     "cursor-cdn.com",
-    "cursorvm.com",
     "windsurf.com",
     "codeium.com",
-    "codeiumdata.com",
     "trae.ai",
-    "augmentcode.com",
-    "midjourney.com",
-    "civitai.com",
     "designer.microsoft.com",
     "elevenlabs.io",
-    "elevenmusic.io",
     "elevenreader.io",
     "openrouter.ai",
-    "groq.com",
-    "together.ai",
-    "fireworks.ai",
-    "replicate.com",
-    "cohere.com",
     "mistral.ai",
     "cerebras.ai",
     "manus.im",
-    "manuscdn.com",
     "genspark.ai",
-    "recraft.ai",
     "kaleido.ai",
     "remove.bg",
     "unscreen.com",
     "pi.ai",
-    "meta.ai",
 ]
 
-# 6. Геоблокированные и зарубежные сервисы (Strava, Canva, DeepL, Notion, JetBrains, Figma/Miro/Trello и др.)
-GEO_DOMAINS = [
-    "strava.com",
+# 6. Креатив, ИИ-генерация и Dev-платформы (совместимы с 109.120.187.249)
+AI_MEDIA_DEV_DOMAINS = [
+    "sora.com",
+    "midjourney.com",
+    "civitai.com",
+    "groq.com",
+    "together.ai",
+    "replicate.com",
+    "cohere.com",
     "canva.com",
-    "canva-apps.com",
-    "canva.dev",
-    "deepl.com",
-    "deepl.app",
-    "linguee.com",
+    "figma.com",
     "notion.so",
-    "notion.site",
     "notion.com",
+    "notion.site",
     "notion.new",
-    "notion-static.com",
-    "ntc.party",
     "jetbrains.com",
     "jetbrains.ai",
-    "jetbrains.space",
-    "jetbrains.team",
-    "myjetbrains.com",
-    "youtrack.cloud",
-    "qodana.cloud",
     "datalore.jetbrains.com",
+    "docker.io",
+]
+
+# 7. Геоблокированные зарубежные сервисы (проверены на 31.58.216.201)
+GEO_DOMAINS = [
+    "strava.com",
+    "deepl.com",
+    "linguee.com",
     "miro.com",
     "linear.app",
     "clickup.com",
     "atlassian.com",
-    "slack.com",
-    "slack-edge.com",
-    "slack-files.com",
-    "slack-imgs.com",
-    "slack-core.com",
-    "slackb.com",
     "framer.com",
-    "framer.app",
-    "framercanvas.com",
-    "framercdn.com",
-    "framerstatic.com",
-    "framerusercontent.com",
-    "wix.com",
-    "editorx.com",
-    "weebly.com",
-    "grammarly.com",
-    "coursera.com",
-    "patreon.com",
-    "patreonusercontent.com",
     "buymeacoffee.com",
-    "medium.com",
     "scribd.com",
-    "scribdassets.com",
-    "slideshare.net",
-    "imgur.com",
-    "giphy.com",
-    "unsplash.com",
-    "pexels.com",
-    "pixabay.com",
     "behance.net",
-    "adobe.com",
     "adobe.io",
-    "adobe.net",
     "autodesk.com",
-    "autodesk.net",
-    "autodesk360.com",
     "autocad.com",
     "sketchup.com",
     "trimble.com",
-    "onshape.com",
     "mongodb.com",
-    "mongodb.net",
-    "elastic.co",
-    "grafana.com",
-    "terraform.io",
-    "hashicorp.com",
-    "docker.io",
     "sentry.io",
-    "sentry.dev",
     "ngrok.com",
-    "ngrok-agent.com",
     "tailscale.com",
     "parsec.app",
-    "teamviewer.com",
-    "anydesk.com",
     "malwarebytes.com",
-    "mbamupdates.com",
     "avast.com",
-    "avcdn.net",
-    "bitdefender.com",
-    "norton.com",
     "dell.com",
-    "dellcdn.com",
-    "intel.com",
     "amd.com",
-    "nvidia.com",
-    "cisco.com",
-    "broadcom.com",
-    "vmware.com",
     "oracle.com",
-    "oraclecloud.com",
-    "sap.com",
-    "salesforce.com",
-    "force.com",
-    "intel.io",
-    "4pda.to",
-    "4pda.ws",
-    "habr.com",
-    "tuta.com",
-    "tutanota.com",
-    "proton.me",
-    "protonmail.com",
     "wise.com",
-    "transferwise.com",
     "revolut.com",
-    "tidal.com",
     "deezer.com",
-    "qobuz.com",
     "last.fm",
-    "audioscrobbler.com",
-    "crunchyroll.com",
-    "netflix.com",
-    "nflxvideo.net",
-    "nflximg.net",
-    "nflxext.com",
-    "nflxso.net",
     "themoviedb.org",
     "tmdb.org",
     "chess.com",
     "supercell.com",
-    "brawlstarsgame.com",
     "clashofclans.com",
-    "clashroyaleapp.com",
     "xbox.com",
-    "xboxlive.com",
-    "epicgames.com",
-    "ubisoft.com",
-    "battle.net",
     "geforcenow.com",
-    "boosteroid.com",
-    "nike.com",
-    "adidas.com",
     "ikea.com",
-    "iherb.com",
     "etsy.com",
-    "ebay.com",
-    "amazon.com",
     "bestbuy.com",
-    "walmart.com",
     "dyson.com",
     "lego.com",
 ]
 
-# 7. Spotify (опциональный отдельный профиль, по умолчанию выключен)
+# 8. Spotify (опциональный профиль, по умолчанию выключен) -> 109.120.187.249
 SPOTIFY_DOMAINS = [
     "spotify.com",
     "scdn.co",
@@ -296,24 +198,137 @@ SPOTIFY_DOMAINS = [
     "spotify.dev",
 ]
 
-# 8. SoundCloud (опциональный CloudFront-маршрут, по умолчанию выключен)
+# 9. SoundCloud (опциональный быстрый CloudFront IP, по умолчанию выключен) -> 108.156.22.80
 SOUNDCLOUD_DOMAINS = [
     "soundcloud.com",
     "sndcdn.com",
 ]
 
-# Проверенные зарубежные IP-релеи (SNI-прокси)
-CLAUDE_OVERRIDE_IPS = ["31.58.216.201"]
-GROK_OVERRIDE_IPS = ["31.58.216.201"]
-OPENAI_OVERRIDE_IPS = ["31.58.216.201"]
-GEMINI_OVERRIDE_IPS = ["109.120.187.249"]
-OTHER_AI_OVERRIDE_IPS = ["31.58.216.201"]
-GEO_OVERRIDE_IPS = ["31.58.216.201"]
-SPOTIFY_OVERRIDE_IPS = ["109.120.187.249"]
-SOUNDCLOUD_OVERRIDE_IPS = ["52.84.150.39"]
+# Декларативная конфигурация групп и правил
+DOMAIN_GROUPS = [
+    {
+        "list_name": "Claude_Domains",
+        "rule_name": "Claude AI Override",
+        "label": "Claude (Anthropic)",
+        "domains": CLAUDE_DOMAINS,
+        "override_ips": ["31.58.216.201"],
+        "default_enabled": True,
+    },
+    {
+        "list_name": "Grok_xAI_Domains",
+        "rule_name": "Grok & xAI Override",
+        "label": "Grok / xAI",
+        "domains": GROK_XAI_DOMAINS,
+        "override_ips": ["31.58.216.201"],
+        "default_enabled": True,
+    },
+    {
+        "list_name": "OpenAI_Domains",
+        "rule_name": "OpenAI Backend Override",
+        "label": "OpenAI (ChatGPT & API)",
+        "domains": OPENAI_DOMAINS,
+        "override_ips": ["31.58.216.201"],
+        "default_enabled": True,
+    },
+    {
+        "list_name": "Gemini_Domains",
+        "rule_name": "Google Gemini Override",
+        "label": "Google Gemini, AI Studio & NotebookLM",
+        "domains": GEMINI_DOMAINS,
+        "override_ips": ["109.120.187.249"],
+        "default_enabled": True,
+    },
+    {
+        "list_name": "Other_AI_Domains",
+        "rule_name": "Other AI Services Override",
+        "label": "AI-IDE и ассистенты (Cursor, Windsurf, Perplexity, ElevenLabs...)",
+        "domains": OTHER_AI_DOMAINS,
+        "override_ips": ["31.58.216.201"],
+        "default_enabled": True,
+    },
+    {
+        "list_name": "AI_Media_Dev_Domains",
+        "rule_name": "AI Media & Dev Override",
+        "label": "Sora, Midjourney, Civitai, Canva, Figma, Notion, JetBrains, Docker",
+        "domains": AI_MEDIA_DEV_DOMAINS,
+        "override_ips": ["109.120.187.249"],
+        "default_enabled": True,
+    },
+    {
+        "list_name": "Geo_Domains",
+        "rule_name": "Geo Blocked Services Override",
+        "label": "Зарубежные сервисы (Strava, DeepL, Miro, Linear, Wise...)",
+        "domains": GEO_DOMAINS,
+        "override_ips": ["31.58.216.201"],
+        "default_enabled": True,
+    },
+    {
+        "list_name": "Spotify_Domains",
+        "rule_name": "Spotify Override",
+        "label": "Spotify (веб-плеер и обложки)",
+        "domains": SPOTIFY_DOMAINS,
+        "override_ips": ["109.120.187.249"],
+        "default_enabled": False,
+    },
+    {
+        "list_name": "SoundCloud_Domains",
+        "rule_name": "SoundCloud Override",
+        "label": "SoundCloud (быстрый CloudFront IP; для SNI-DPI нужен d2o/Zapret)",
+        "domains": SOUNDCLOUD_DOMAINS,
+        "override_ips": ["108.156.22.80"],
+        "default_enabled": False,
+    },
+]
+
+
+def select_enabled_groups(groups: list) -> list[bool]:
+    """Интерактивный выбор активных групп доменов перед применением правил."""
+    states = [bool(g["default_enabled"]) for g in groups]
+
+    def print_menu():
+        print("\n[?] Выберите, какие группы правил включить (невыбранные создадутся с выключенным тумблером):")
+        for idx, (grp, on) in enumerate(zip(groups, states), start=1):
+            mark = "ВКЛ " if on else "ВЫКЛ"
+            print(f"    {idx}. [{mark}] {grp['label']} ({len(grp['domains'])} дом.)")
+
+    print_menu()
+    print("    Enter — применить текущий выбор | Номера (напр. 7 8 9) — переключить | 'all' / 'none'")
+
+    while True:
+        raw = safe_input("Ваш выбор [Enter для продолжения]: ").strip().lower()
+        if not raw or raw in ("ok", "done", "go"):
+            break
+        if raw == "all":
+            states = [True] * len(groups)
+            print_menu()
+            continue
+        if raw == "none":
+            states = [False] * len(groups)
+            print_menu()
+            continue
+
+        tokens = re.findall(r"\d+", raw)
+        if not tokens:
+            print("    [!] Введите номера через пробел/запятую, 'all', 'none' или нажмите Enter.")
+            continue
+
+        changed = False
+        for tok in tokens:
+            idx = int(tok) - 1
+            if 0 <= idx < len(states):
+                states[idx] = not states[idx]
+                changed = True
+            else:
+                print(f"    [!] Номер {tok} вне диапазона (1–{len(groups)}).")
+        if changed:
+            print_menu()
+
+    return states
 
 
 class CloudflareGatewaySetup:
+    """Клиент настройки списков и DNS-правил Cloudflare Zero Trust Gateway."""
+
     def __init__(self, account_id: str, api_token: str):
         self.account_id = account_id.strip()
         self.api_token = api_token.strip()
@@ -362,8 +377,7 @@ class CloudflareGatewaySetup:
             raise RuntimeError(f"Сетевая ошибка: {e}")
 
     def verify_token(self):
-        # Проверяем сразу реальный эндпоинт Gateway — так валидируются
-        # и токен (включая Account Tokens), и Account ID, и активация Zero Trust.
+        # Проверка через locations валидирует Account API Tokens, Account ID и активацию Zero Trust.
         self._api_call("locations")
 
     def cleanup_existing_settings(self):
@@ -417,7 +431,6 @@ class CloudflareGatewaySetup:
             print("    -> Существующие настройки сохранены, обновляем поверх.")
 
     def get_or_create_list(self, name: str, domains: list) -> str:
-        # Убираем дубликаты с сохранением порядка
         unique_domains = list(dict.fromkeys(domains))
         res = self._api_call("lists")
         existing_lists = res.get("result") or []
@@ -456,6 +469,26 @@ class CloudflareGatewaySetup:
         res = self._api_call("rules")
         existing_rules = res.get("result") or []
 
+        if not list_ids:
+            for rule in existing_rules:
+                if rule.get("name") == name:
+                    rule_id = rule.get("id")
+                    payload = {
+                        "name": name,
+                        "description": rule.get("description", "Block AAAA (IPv6) queries"),
+                        "enabled": False,
+                        "action": "block",
+                        "precedence": rule.get("precedence", 1),
+                        "traffic": rule.get("traffic"),
+                        "rule_settings": {"block_page_enabled": False},
+                        "filters": ["dns"],
+                    }
+                    self._api_call(f"rules/{rule_id}", method="PUT", data=payload)
+                    print(f"  [✓] Отключено правило '{name}' (нет активных групп)")
+                    return rule_id
+            print(f"  [-] Пропущено правило '{name}' (нет активных групп)")
+            return None
+
         used_precedences = {
             r.get("precedence")
             for r in existing_rules
@@ -470,7 +503,7 @@ class CloudflareGatewaySetup:
 
         payload = {
             "name": name,
-            "description": "Block AAAA (IPv6) queries for overridden domains to force IPv4 SNI proxy",
+            "description": "Block AAAA (IPv6) queries for active overridden domains to force IPv4 SNI proxy",
             "enabled": enabled,
             "action": "block",
             "precedence": precedence,
@@ -485,12 +518,12 @@ class CloudflareGatewaySetup:
             if rule.get("name") == name:
                 rule_id = rule.get("id")
                 self._api_call(f"rules/{rule_id}", method="PUT", data=payload)
-                print(f"  [✓] Обновлено правило '{name}' (precedence={precedence}, enabled={enabled})")
+                print(f"  [✓] Обновлено правило '{name}' (precedence={precedence}, списков={len(list_ids)}, enabled={enabled})")
                 return rule_id
 
         res = self._api_call("rules", method="POST", data=payload)
         rule_id = (res.get("result") or {}).get("id")
-        print(f"  [+] Создано правило '{name}' (precedence={precedence}, enabled={enabled})")
+        print(f"  [+] Создано правило '{name}' (precedence={precedence}, списков={len(list_ids)}, enabled={enabled})")
         return rule_id
 
     def get_or_create_rule(self, name: str, list_id: str, override_ips: list, enabled: bool = True):
@@ -547,41 +580,23 @@ class CloudflareGatewaySetup:
         print("      Авторизация успешна!")
 
         self.maybe_prompt_cleanup()
+        enabled_states = select_enabled_groups(DOMAIN_GROUPS)
 
-        print("\n[2/4] Создание разделённых списков доменов...")
-        claude_list_id = self.get_or_create_list("Claude_Domains", CLAUDE_DOMAINS)
-        grok_list_id = self.get_or_create_list("Grok_xAI_Domains", GROK_XAI_DOMAINS)
-        openai_list_id = self.get_or_create_list("OpenAI_Domains", OPENAI_DOMAINS)
-        gemini_list_id = self.get_or_create_list("Gemini_Domains", GEMINI_DOMAINS)
-        other_ai_list_id = self.get_or_create_list("Other_AI_Domains", OTHER_AI_DOMAINS)
-        geo_list_id = self.get_or_create_list("Geo_Domains", GEO_DOMAINS)
-        spotify_list_id = self.get_or_create_list("Spotify_Domains", SPOTIFY_DOMAINS)
-        soundcloud_list_id = self.get_or_create_list("SoundCloud_Domains", SOUNDCLOUD_DOMAINS)
+        print("\n[2/4] Создание и синхронизация списков доменов...")
+        list_ids = []
+        for grp in DOMAIN_GROUPS:
+            lid = self.get_or_create_list(grp["list_name"], grp["domains"])
+            list_ids.append(lid)
 
         print("\n[3/4] Настройка правил перенаправления (DNS Override + защита от IPv6)...")
-        all_list_ids = [
-            claude_list_id,
-            grok_list_id,
-            openai_list_id,
-            gemini_list_id,
-            other_ai_list_id,
-            geo_list_id,
-            spotify_list_id,
-            soundcloud_list_id,
-        ]
+        active_list_ids = [lid for lid, on in zip(list_ids, enabled_states) if on]
         self.get_or_create_ipv6_block_rule(
             "Force IPv4 for Overridden Services",
-            all_list_ids,
-            enabled=True,
+            active_list_ids,
+            enabled=bool(active_list_ids),
         )
-        self.get_or_create_rule("Claude AI Override", claude_list_id, CLAUDE_OVERRIDE_IPS, enabled=True)
-        self.get_or_create_rule("Grok & xAI Override", grok_list_id, GROK_OVERRIDE_IPS, enabled=True)
-        self.get_or_create_rule("OpenAI Backend Override", openai_list_id, OPENAI_OVERRIDE_IPS, enabled=True)
-        self.get_or_create_rule("Google Gemini Override", gemini_list_id, GEMINI_OVERRIDE_IPS, enabled=True)
-        self.get_or_create_rule("Other AI Services Override", other_ai_list_id, OTHER_AI_OVERRIDE_IPS, enabled=True)
-        self.get_or_create_rule("Geo Blocked Services Override", geo_list_id, GEO_OVERRIDE_IPS, enabled=True)
-        self.get_or_create_rule("Spotify Override", spotify_list_id, SPOTIFY_OVERRIDE_IPS, enabled=False)
-        self.get_or_create_rule("SoundCloud Override", soundcloud_list_id, SOUNDCLOUD_OVERRIDE_IPS, enabled=False)
+        for grp, lid, on in zip(DOMAIN_GROUPS, list_ids, enabled_states):
+            self.get_or_create_rule(grp["rule_name"], lid, grp["override_ips"], enabled=on)
 
         print("\n[4/4] Получение адресов вашей персональной точки DNS...")
         loc = self.get_or_create_location("home")
