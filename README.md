@@ -20,10 +20,10 @@
 | 6 | **AI Media & Dev Override** (`AI_Media_Dev_Domains`) | `sora.com`, `midjourney.com`, `civitai.com`, `canva.com`, `figma.com`, `notion.*`, `jetbrains.*`, `docker.io`, `groq.com`, `replicate.com` | Включено |
 | 7 | **Geo Blocked Services Override** (`Geo_Domains`) | `strava.com`, `deepl.com`, `miro.com`, `linear.app`, `atlassian.com`, `framer.com`, `tailscale.com`, `wise.com`, `deezer.com` и др. | Включено |
 | 8 | **Spotify Override** (`Spotify_Domains`) | `spotify.com`, `scdn.co`, `spotifycdn.com` | Выключено (включается при выборе в скрипте или в панели) |
-| 9 | **SoundCloud Override** (`SoundCloud_Domains`) | `soundcloud.com`, `sndcdn.com` *(быстрый Amazon CloudFront IP `108.156.22.80`)* | Выключено (включается при выборе в скрипте или в панели) |
+| 9 | **SoundCloud Override** (`SoundCloud_Domains`) | `soundcloud.com`, `sndcdn.com` *(быстрый маршрут Amazon CloudFront)* | Выключено (включается при выборе в скрипте или в панели) |
 | — | **Force IPv4 for Overridden Services** | Блокировка `AAAA`-запросов (IPv6) только для **активных** групп выше, чтобы IPv6 не обходил `DNS Override` | Включено автоматически при наличии активных групп |
 
-> **Про SoundCloud:** публичные SNI-прокси не обслуживают `soundcloud.com` (сбрасывают TLS), поэтому правило использует быстрый рабочий IP **Amazon CloudFront** (`108.156.22.80`). Это решает блокировку или троттлинг отдельных подсетей CloudFront, а для обхода SNI-DPI нужен `d2k`/`z2k` или аналог.
+> **Про SoundCloud:** публичные SNI-прокси не обслуживают `soundcloud.com` (сбрасывают TLS), поэтому правило использует быстрый рабочий IP **Amazon CloudFront**. Это решает блокировку или троттлинг отдельных подсетей CloudFront, а для обхода SNI-DPI нужен `d2k`/`z2k` или аналог.
 
 > **При повторном запуске:** если на аккаунте уже есть DNS-правила или списки доменов, скрипт предложит выбор — оставить их и обновиться поверх или полностью очистить перед настройкой. Ваша точка DNS (`location`) и выданные адреса DoH/DoT при этом сохраняются.
 
@@ -99,6 +99,6 @@ python3 setup_cf_dns.py
 * **Старые cookies / сессия:** откройте сайт в режиме инкогнито или очистите cookies для проблемного домена.
 * **Проверка домена вручную:** любой домен и его совместимость с релеем можно проверить командой:
   ```bash
-  curl -I --resolve example.com:443:31.58.216.201 https://example.com
+  curl -I --resolve example.com:443:<IP_ПРОКСИ> https://example.com
   ```
   и при необходимости убрать или переключить проблемный список в панели Cloudflare Zero Trust (*Gateway → Firewall Policies → DNS*).
